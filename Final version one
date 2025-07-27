@@ -1,0 +1,87 @@
+import time
+import tkinter as tk
+from Game_core import StartPage, PlayerInfoPage, LevelMapPage, GamePage, LeaderboardPage
+from utils import SoundManager
+
+class BeatMathApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title('SpongeBob Math Adventure')
+        self.geometry('1000x800')  # 增加窗口尺寸
+        self.minsize(800, 700)    # 设置最小尺寸
+        self.configure(bg='#88cfff')
+        self.resizable(True, True)  # 允许调整大小
+        
+        # Set window icon
+        try:
+            self.iconbitmap('assets/Images/spongebob.ico')
+        except:
+            pass
+        
+        # Game state management
+        self.player_name = ''
+        self.difficulty = 'Easy'  # 初始值，但会在玩家选择关卡时被覆盖
+        self.selected_character = tk.StringVar(value='SpongeBob')
+        self.page_history = []
+        self.last_score = None  # 存储最近一次的游戏分数
+
+        # Sound management
+        self.sm = SoundManager()
+
+        # Create container
+        container = tk.Frame(self)
+        container.pack(fill='both', expand=True)
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
+        self.container = container
+
+        # Frame management
+        self.frames = {}
+        pages = (StartPage, PlayerInfoPage, LevelMapPage, GamePage, LeaderboardPage)
+        for page_class in pages:
+            frame = page_class(parent=container, controller=self)
+            self.frames[page_class.__name__] = frame
+            frame.grid(row=0, column=0, sticky='nsew')
+
+        self.current_page = 'StartPage'
+        self.show_frame('StartPage')
+
+    def show_frame(self, name):
+        """Display specified frame and manage history"""
+        if self.current_page and self.current_page != name and self.current_page != 'StartPage':
+            self.page_history.append(self.current_page)
+        
+        frame = self.frames[name]
+        
+        # Pre-display processing
+        if name == 'GamePage':
+            if not frame.reset_game():
+                return
+        elif name == 'LeaderboardPage':
+            frame.refresh()
+        
+        # Execute frame switch
+        self.current_page = name
+        frame.tkraise()
+    
+    def go_back(self):
+        """Return to previous page"""
+        if self.page_history:
+            prev = self.page_history.pop()
+            self.show_frame(prev)
+        else:
+            self.show_frame('StartPage')
+    
+    def on_close(self):
+        """Handle window close event"""
+        self.sm.stop_bg_music()
+        self.destroy()
+    
+    def destroy(self):
+        """Override destroy method for resource cleanup"""
+        self.sm.cleanup()
+        super().destroy()
+
+if __name__ == '__main__':
+    app = BeatMathApp()
+    app.mainloop()
